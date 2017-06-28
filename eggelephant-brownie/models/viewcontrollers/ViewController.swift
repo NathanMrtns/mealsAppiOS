@@ -12,11 +12,53 @@ protocol AddMealDelegate{
     func addMeal(meal:Meal)
 }
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, AddAnItemDelegate {
     
     @IBOutlet var nameField : UITextField!
     @IBOutlet var happinessField : UITextField!
+    @IBOutlet var tableView : UITableView?
+    
     var delegate:AddMealDelegate?
+    
+    var selectedItems = Array<Item>()
+    
+    var items = [ Item(name: "Chocolate Brownie", calories: 10),
+                  Item(name: "Vanila Muffin", calories: 10),
+                  Item(name: "Cookie", calories: 10),
+                  Item(name: "Coconut oil", calories: 500),
+                  Item(name: "Chocolate frosting", calories: 1000),
+                  Item(name: "Chocolate chip", calories: 1000)
+    ]
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return items.count
+    }
+    
+    func tableView(_ tableView: UITableView,
+                   cellForRowAt indexPath: IndexPath)
+        -> UITableViewCell {
+            let row = indexPath.row
+            let item = items[ row ]
+            let cell = UITableViewCell(style:
+                UITableViewCellStyle.default,reuseIdentifier: nil)
+            cell.textLabel?.text = item.name
+            return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let cell = tableView.cellForRow(at: indexPath)!
+        
+        if (cell.accessoryType == UITableViewCellAccessoryType.none) {
+            cell.accessoryType = UITableViewCellAccessoryType.checkmark
+            selectedItems.append(items[indexPath.row])
+        } else {
+            cell.accessoryType = UITableViewCellAccessoryType.none
+            if let position = selectedItems.index(of: items[indexPath.row]){
+                selectedItems.remove(at: position)
+            }
+        }
+    }
+    
     
     @IBAction func add() {
         if nameField == nil || happinessField == nil {
@@ -31,6 +73,7 @@ class ViewController: UIViewController {
         }
         
         let meal = Meal(name: name!, happiness: happiness!)
+        meal.items = selectedItems
         
         if(delegate == nil){
             return
@@ -38,12 +81,33 @@ class ViewController: UIViewController {
         
         delegate!.addMeal(meal: meal)
 
-        print("eaten: \(meal.name) \(meal.happiness)")
+        print("eaten: \(meal.name) \(meal.happiness) \(meal.items)")
         
         if let navigation = self.navigationController {
             navigation.popViewController(animated: true)
         }
     }
     
+    func addItem(item: Item) {
+        items.append(item)
+        if(tableView == nil){
+            return
+        }
+        tableView!.reloadData()
+    }
+    
+    override func viewDidLoad() {
+        let newItemButton = UIBarButtonItem(title: "new item",
+                                            style: UIBarButtonItemStyle.plain,
+                                            target: self,
+                                            action: #selector(ViewController.showNewItem))
+        navigationItem.rightBarButtonItem = newItemButton
+    }
+    
+    @IBAction func showNewItem() {
+        let newItem = NewItemViewController(delegate:self)
+        if let navigation = navigationController{
+            navigationController?.pushViewController(newItem, animated: true)
+        }
+    }
 }
-
