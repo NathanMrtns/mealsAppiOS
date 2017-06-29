@@ -11,14 +11,11 @@ import UIKit
 class MealsTableViewController: UITableViewController, AddMealDelegate {
     
     var meals = Array<Meal>()
-    var mymeal : Meal = Meal(name:"Teste", happiness:5)
-    var it = Item(name: "Feijao", calories: 5.0)
-    var it2 = Item(name: "Arroz", calories: 3.0)
     
     override func viewDidLoad() {
-        mymeal.items.append(it)
-        mymeal.items.append(it2)
-        meals.append(mymeal)
+        let dir = getUserDirectory()
+        let archive =  "\(dir)/eggplant-brownie-meals"
+        meals = Dao().loadMeals()
         tableView.reloadData()
     }
     
@@ -48,6 +45,7 @@ class MealsTableViewController: UITableViewController, AddMealDelegate {
     
     func addMeal(meal:Meal){
         meals.append(meal)
+        Dao().save(meals:meals)
         tableView.reloadData()
     }
     
@@ -61,15 +59,46 @@ class MealsTableViewController: UITableViewController, AddMealDelegate {
             let row = indexPath!.row
             let meal = meals[row]
             
-            var message = "Happiness: \(meal.happiness)"
+            RemoveMealController(controller: self).show(meal: meal, handler: { action in
+                                                            self.meals.remove(at: row)
+                                                            self.tableView.reloadData()
+            })
             
-            let details = UIAlertController(title: meal.name, message: meal.details(),
-                preferredStyle: UIAlertControllerStyle.alert)
-            let ok = UIAlertAction(title: "Ok",
-                                   style: UIAlertActionStyle.cancel,
-                                   handler: nil)
-            details.addAction(ok);
-            present(details, animated: true, completion: nil)
+            func removeSelected(action:UIAlertAction!){
+                meals.remove(at: row)
+                tableView.reloadData()
+            }
+            
+            show(meal:meal, handler:{ action in
+                self.meals.remove(at: row)
+                self.tableView.reloadData()
+            })
         }
     }
+    
+    func show(meal:Meal, handler:@escaping (UIAlertAction!)->Void){
+                let details = UIAlertController(title: meal.name, message: meal.details(),
+                                        preferredStyle: UIAlertControllerStyle.alert)
+        
+        let remove = UIAlertAction(title: "Remove",
+                                   style: UIAlertActionStyle.destructive,
+                                   handler: handler)
+        details.addAction(remove)
+        
+        let cancel = UIAlertAction(title: "Cancel",
+                                   style: UIAlertActionStyle.cancel,
+                                   handler: nil)
+        details.addAction(cancel)
+        present(details, animated: true, completion: nil)
+    }
+    
+    func getUserDirectory() -> String{
+        let userDir = NSSearchPathForDirectoriesInDomains(
+            FileManager.SearchPathDirectory.documentDirectory,
+            FileManager.SearchPathDomainMask.userDomainMask,
+            true)
+        return userDir[0] as String
+    }
+    
+
 }

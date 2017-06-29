@@ -22,13 +22,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     
     var selectedItems = Array<Item>()
     
-    var items = [ Item(name: "Chocolate Brownie", calories: 10),
-                  Item(name: "Vanila Muffin", calories: 10),
-                  Item(name: "Cookie", calories: 10),
-                  Item(name: "Coconut oil", calories: 500),
-                  Item(name: "Chocolate frosting", calories: 1000),
-                  Item(name: "Chocolate chip", calories: 1000)
-    ]
+    var items = Array<Item>()
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return items.count
@@ -60,40 +54,43 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     }
     
     
-    @IBAction func add() {
+    func getMealFromForm() -> Meal? {
         if nameField == nil || happinessField == nil {
-            return
-        }
-
+            return nil }
         let name = nameField!.text
         let happiness = Int(happinessField!.text!)
-        
         if happiness == nil {
-            return
-        }
-        
+            return nil }
         let meal = Meal(name: name!, happiness: happiness!)
         meal.items = selectedItems
-        
-        if(delegate == nil){
-            return
-        }
-        
-        delegate!.addMeal(meal: meal)
-
         print("eaten: \(meal.name) \(meal.happiness) \(meal.items)")
-        
-        if let navigation = self.navigationController {
-            navigation.popViewController(animated: true)
+        return meal
+    }
+    
+    @IBAction func add() {
+        if let meal = getMealFromForm() {
+            if let meals = delegate {
+                meals.addMeal(meal: meal)
+                if let navigation = self.navigationController {
+                    navigation.popViewController(animated: true)
+                }else{
+                    Alert(controller: self).show(message:"Unexpected error, but meal was added.")
+                }
+                return
+            }
         }
+        Alert(controller:self).show()
     }
     
     func addItem(item: Item) {
         items.append(item)
-        if(tableView == nil){
-            return
+        let dir = getUserDirectory()
+        Dao().save(items:items)
+        if let table = tableView{
+            table.reloadData()
+        } else {
+            Alert(controller:self).show(message:"Unexpected error, but the item was added.")
         }
-        tableView!.reloadData()
     }
     
     override func viewDidLoad() {
@@ -102,12 +99,24 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
                                             target: self,
                                             action: #selector(ViewController.showNewItem))
         navigationItem.rightBarButtonItem = newItemButton
+        
+        items=Dao().loadItems()
     }
     
     @IBAction func showNewItem() {
         let newItem = NewItemViewController(delegate:self)
         if let navigation = navigationController{
             navigationController?.pushViewController(newItem, animated: true)
+        }else{
+            Alert(controller:self).show()
         }
+    }
+    
+    func getUserDirectory() -> String{
+        let userDir = NSSearchPathForDirectoriesInDomains(
+            FileManager.SearchPathDirectory.documentDirectory,
+            FileManager.SearchPathDomainMask.userDomainMask,
+            true)
+        return userDir[0] as String
     }
 }
